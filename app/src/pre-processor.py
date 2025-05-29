@@ -8,4 +8,5 @@ import pandas as pd
 import numpy as np
 
 # Code section
-def cut_DataFrame_by_Period(df: pd.DataFrame) -> pd.DataFrame:
+def cut_DataFrame_by_Period(df: pd.DataFrame, days: int) -> pd.DataFrame:
+    
