@@ -28,7 +28,7 @@ datasets = [
 
 # Code section
 
-# Repeat the process for each dataset
+# Pre-processing: Repeat for each dataset
 for dataset in datasets:
     try:
         # Validate if the dataFrame is a pandas DataFrame
