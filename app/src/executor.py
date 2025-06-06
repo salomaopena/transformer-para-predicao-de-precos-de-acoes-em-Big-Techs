@@ -7,11 +7,9 @@
 import pandas as pd
 import numpy as np
 
-from datetime import datetime, date, timedelta
-
-from dataset import Dataset
-from pre_processor import cut_DataFrame_by_Period, convert_DateString_to_Date
-from validator import is_String, is_DataFrame
+from data_processor.dataset import Dataset
+from pre_processor.pre_processor import cut_dataFrame_by_period, convert_dateString_to_date
+from pre_processor.validator import is_string, is_dataFrame
 
 # Load datasets
 APPL_PANDAS_DATAFRAME = pd.read_csv(r'./../data/Historical_Data_APPL_1Y.csv')
@@ -32,20 +30,28 @@ datasets = [
 for dataset in datasets:
     try:
         # Validate if the dataFrame is a pandas DataFrame
-        if is_DataFrame(dataset.dataFrame):
+        if is_dataFrame(dataset.dataFrame):
             # Iterate through the DataFrame rows
             for index, row in dataset.dataFrame.iterrows():
                 # Try to convert the 'Date' column to a date object
                 try:
                     # Validate if the 'Date' column is a string
-                    if is_String(dataset.dataFrame.loc[index, 'Date']):
+                    if is_string(dataset.dataFrame.loc[index, 'Date']):
                         # Convert the 'Date' string to a date object
-                        dataset.dataFrame.loc[index, 'Date'] = convert_DateString_to_Date(dataset.dataFrame['Date'][index])
+                        dataset.dataFrame.loc[index, 'Date'] = convert_dateString_to_date(dataset.dataFrame['Date'][index])
                 # Catch any TypeError that may occur during conversion
                 except TypeError as error:
                     print("Error: ", error)
             # Cut the DataFrame by the last 90 days
-            selectedData = cut_DataFrame_by_Period(dataset.dataFrame, 90)
+            selectedData = cut_dataFrame_by_period(dataset.dataFrame, 90)
+            # Print the selected data
+            print(f"Selected data for {dataset.title}:")
             print(selectedData)
+
     except TypeError as error:
         print("Error: ", error)
+
+#Testing MultiHeadAttention
+from transformer.multi_head_attention import MultiHeadAttention
+
+multi_head_attention = MultiHeadAttention(headDimension=64, numberHeads=8)

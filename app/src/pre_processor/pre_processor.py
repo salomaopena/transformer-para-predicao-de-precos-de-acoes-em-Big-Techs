@@ -10,7 +10,7 @@ import numpy as np
 from datetime import datetime, date, timedelta
 
 # Code section
-def convert_DateString_to_Date(dateString: str) -> date:
+def convert_dateString_to_date(dateString: str) -> date:
     """
     Converts a date string in the format 'MM/DD/YYYY' to a date object.
     """
@@ -18,7 +18,7 @@ def convert_DateString_to_Date(dateString: str) -> date:
 
 
 
-def cut_DataFrame_by_Period(df: pd.DataFrame, days: int) -> pd.DataFrame:
+def cut_dataFrame_by_period(df: pd.DataFrame, days: int) -> pd.DataFrame:
     """
     Cuts the DataFrame from today date to the days quantity.
     """

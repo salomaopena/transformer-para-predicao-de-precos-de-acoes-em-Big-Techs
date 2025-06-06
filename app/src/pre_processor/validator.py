@@ -7,13 +7,13 @@
 import pandas as pd
 
 # Code section
-def is_String(data: any) -> bool:
+def is_string(data: any) -> bool:
     if isinstance(data, str):
         return True
     else:
         raise TypeError("Data is not a string")
 
-def is_DataFrame(data: any) -> bool:
+def is_dataFrame(data: any) -> bool:
     if isinstance(data, pd.DataFrame):
         return True
     else:
