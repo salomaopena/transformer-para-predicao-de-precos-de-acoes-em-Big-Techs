@@ -44,14 +44,18 @@ for dataset in datasets:
                     print("Error: ", error)
             # Cut the DataFrame by the last 90 days
             selectedData = cut_dataFrame_by_period(dataset.dataFrame, 90)
+
+
             # Print the selected data
-            print(f"Selected data for {dataset.title}:")
-            print(selectedData)
+            # print(f"Selected data for {dataset.title}:")
+            # print(selectedData)
 
     except TypeError as error:
         print("Error: ", error)
 
 #Testing MultiHeadAttention
 from transformer.multi_head_attention import MultiHeadAttention
+from transformer.positional_enconding import PositionalEncoding
 
-multi_head_attention = MultiHeadAttention(headDimension=64, numberHeads=8)
+# multi_head_attention = MultiHeadAttention(headDimension=64, numberHeads=8)
+positional_encoding = PositionalEncoding(model=64, dropoutProbability=0.1, maxLength=400)
