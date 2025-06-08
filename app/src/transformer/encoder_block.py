@@ -8,20 +8,20 @@ class EncoderBlock(nn.Module):
         super(EncoderBlock, self).__init__()
 
         self.multiHeadAttention = MultiHeadAttention(headDimension=headDimension, numberHeads=numberHeads)
-        print(f"MultiHeadAttention: {self.multiHeadAttention}")
+        # print(f"MultiHeadAttention: {self.multiHeadAttention}")
 
         self.normalization1 = nn.LayerNorm(headDimension)
-        print(f"Normalization1 Weight: {self.normalization1.weight}")
-        print(f"Normalization1 Bias: {self.normalization1.bias}")
-        print(f"Normalization1 Shape: {self.normalization1.weight.shape}")
+        # print(f"Normalization1 Weight: {self.normalization1.weight}")
+        # print(f"Normalization1 Bias: {self.normalization1.bias}")
+        # print(f"Normalization1 Shape: {self.normalization1.weight.shape}")
 
         self.positionWiseFeedForward = PositionWiseFeedForward(headDimension, headDimension)
-        print(f"PositionWiseFeedForward: {self.positionWiseFeedForward}")
+        # print(f"PositionWiseFeedForward: {self.positionWiseFeedForward}")
 
         self.normalization2 = nn.LayerNorm(headDimension)
-        print(f"Normalization2 Weight: {self.normalization2.weight}")
-        print(f"Normalization2 Bias: {self.normalization2.bias}")
-        print(f"Normalization2 Shape: {self.normalization2.weight.shape}")
+        # print(f"Normalization2 Weight: {self.normalization2.weight}")
+        # print(f"Normalization2 Bias: {self.normalization2.bias}")
+        # print(f"Normalization2 Shape: {self.normalization2.weight.shape}")
 
         self.dropout = nn.Dropout(dropout)
         

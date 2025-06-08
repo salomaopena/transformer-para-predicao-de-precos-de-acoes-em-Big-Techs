@@ -1,43 +1,42 @@
 import torch.nn as nn
 
-from app.src.transformer.positional_enconding import PositionalEncoding
-from app.src.transformer.decoderBlock import DecoderBlock
+from positional_enconding import PositionalEncoding
+from decoder_block import DecoderBlock
 
 class Decoder(nn.Module):
     def __init__(
         self, 
-        vocab_size: int, 
-        n_dim: int, 
+        vocabularySize: int, 
+        headDimension: int, 
+        numberHeads: int,
         dropout: float, 
-        n_decoder_blocks: int,
-        n_heads: int):
+        numberDecoderBlocks: int):
         
         super(Decoder, self).__init__()
         
         self.embedding = nn.Embedding(
-            num_embeddings=vocab_size, 
-            embedding_dim=n_dim,
+            num_embeddings=vocabularySize, 
+            embedding_dim=headDimension,
             padding_idx=0
         )
-        self.positional_encoding = PositionalEncoding(
-            d_model=n_dim, 
+        self.positionalEncoding = PositionalEncoding(
+            model=headDimension, 
             dropout=dropout
         )
           
-        self.decoder_blocks = nn.ModuleList([
-            DecoderBlock(n_dim, dropout, n_heads) for _ in range(n_decoder_blocks)
+        self.decoderBlocks = nn.ModuleList([
+            DecoderBlock(headDimension, dropout, numberHeads) for _ in range(numberDecoderBlocks)
         ])
         
-        
-    def forward(self, tgt, memory, tgt_mask=None, tgt_padding_mask=None, memory_padding_mask=None):
-        x = self.embedding(tgt)
-        x = self.positional_encoding(x)
+    def forward(self, target, memory, targetMask=None, targetPaddingMask=None, memoryPaddingMask=None):
+        x = self.embedding(target)
+        x = self.positionalEncoding(x)
 
-        for block in self.decoder_blocks:
+        for block in self.decoderBlocks:
             x = block(
                 x, 
                 memory, 
-                tgt_mask=tgt_mask, 
-                tgt_padding_mask=tgt_padding_mask, 
-                memory_padding_mask=memory_padding_mask)
+                targetMask=targetMask, 
+                targetPaddingMask=targetPaddingMask, 
+                memoryPaddingMask=memoryPaddingMask)
         return x

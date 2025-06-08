@@ -33,7 +33,6 @@ class Encoder(nn.Module):
             EncoderBlock(headDimension, dropout, numberHeads) for _ in range(numberEncoderBlocks)
         ])
         
-        
     def forward(self, x, paddingMask=None):
         x = self.embedding(x) * math.sqrt(self.headDimension)
         x = self.positionalEncoding(x)

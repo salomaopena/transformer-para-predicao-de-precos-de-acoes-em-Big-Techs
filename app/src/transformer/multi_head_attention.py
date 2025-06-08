@@ -37,18 +37,15 @@ class MultiHeadAttention(nn.Module):
         attention_mask : tensor of shape (query_sequence_length, key_sequence_length)
         key_padding_mask : tensor of shape (sequence_length, key_sequence_length)
         
-    
         """
         self.check_scaled_dot_product_attention_inputs(query)
         self.check_scaled_dot_product_attention_inputs(key)
         self.check_scaled_dot_product_attention_inputs(value)
         
-        
         d_k = query.size(-1)
         print(f"query: {query.size()}, d_k: {d_k}")
         tgt_len, src_len = query.size(-2), key.size(-2)
 
-        
         # logits = (B, H, tgt_len, E) * (B, H, E, src_len) = (B, H, tgt_len, src_len)
         logits = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k) 
         
@@ -60,13 +57,11 @@ class MultiHeadAttention(nn.Module):
                 logits = logits + attentionMask
             else:
                 raise ValueError(f"Attention mask size {attentionMask.size()}")
-        
                 
         # Key mask here
         if keyPaddingMask is not None:
             keyPaddingMask = keyPaddingMask.unsqueeze(1).unsqueeze(2) # Broadcast over batch size, num heads
             logits = logits + keyPaddingMask
-        
         
         attention = torch.softmax(logits, dim=-1)
         output = torch.matmul(attention, value) # (batch_size, num_heads, sequence_length, hidden_dim)
