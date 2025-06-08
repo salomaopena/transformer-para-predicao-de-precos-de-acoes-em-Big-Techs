@@ -1,10 +1,8 @@
 import torch.nn as nn
-import matplotlib.pyplot as plt
 
 class PositionWiseFeedForward(nn.Module):
     def __init__(self, model: int, feedForward: int):
         super(PositionWiseFeedForward, self).__init__()
-
 
         self.feedForwardLinearTransformation1 = nn.Linear(model, feedForward)
         # print(f"FeedForward1 Weight: {self.feedForwardLinearTransformation1.weight[0, :]}")
@@ -21,4 +19,4 @@ class PositionWiseFeedForward(nn.Module):
         self.linearUnitFuction = nn.ReLU()
 
     def forward(self, x):
-        return self.feedForward2(self.linearFunction(self.feedForward1(x)))
+        return self.feedForwardLinearTransformation2(self.linearUnitFuction(self.feedForwardLinearTransformation1(x)))

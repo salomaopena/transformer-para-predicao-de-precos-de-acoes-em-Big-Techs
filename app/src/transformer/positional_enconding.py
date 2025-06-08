@@ -7,6 +7,7 @@ class PositionalEncoding(nn.Module):
 
     def __init__(self, model, dropoutProbability=0.1, maxLength=400):
         super(PositionalEncoding, self).__init__()
+        
         self.dropout = nn.Dropout(p=dropoutProbability)
         
         positionalEnconding = torch.zeros(maxLength, model)
