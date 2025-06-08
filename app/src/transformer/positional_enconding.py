@@ -3,8 +3,6 @@ import torch.nn as nn
 import math
 import matplotlib.pyplot as plt
 
-
-# Taken from https://pytorch.org/tutorials/beginner/transformer_tutorial.html#define-the-model
 class PositionalEncoding(nn.Module):
 
     def __init__(self, model, dropoutProbability=0.1, maxLength=400):
@@ -30,7 +28,6 @@ class PositionalEncoding(nn.Module):
         positionalEnconding[:, 1::2] = torch.cos(position * divTerm)
         positionalEnconding = positionalEnconding.unsqueeze(0)
         #print(f"Positional Encoding Shape: {positionalEnconding.shape}")
-        
 
         # for i in range(0, maxLength):
         #     print(f"Positional Encoding at position {i}: {positionalEnconding[0, i, :]}")
@@ -42,14 +39,12 @@ class PositionalEncoding(nn.Module):
         #     plt.grid(True)
         #     plt.show()
         
-        self.register_buffer('pe', positionalEnconding)
-
-    
+        self.register_buffer('positionalEnconding', positionalEnconding)
 
     def forward(self, tensor):
         """
         Arguments:
             tensor: Tensor, shape ``[batch_size, seq_len, embedding_dim]``
         """
-        tensor = tensor + self.pe[:, :tensor.size(1), :]
+        tensor = tensor + self.positionalEnconding[:, :tensor.size(1), :]
         return tensor

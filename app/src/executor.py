@@ -53,9 +53,11 @@ for dataset in datasets:
     except TypeError as error:
         print("Error: ", error)
 
-#Testing MultiHeadAttention
+#Testing Transformer components
 from transformer.multi_head_attention import MultiHeadAttention
 from transformer.positional_enconding import PositionalEncoding
+from transformer.position_wise_feed_forward import PositionWiseFeedForward
 
 # multi_head_attention = MultiHeadAttention(headDimension=64, numberHeads=8)
-positional_encoding = PositionalEncoding(model=64, dropoutProbability=0.1, maxLength=400)
+# positional_encoding = PositionalEncoding(model=64, dropoutProbability=0.1, maxLength=400)
+position_wise_feed_forward = PositionWiseFeedForward(model=64, feedForward=400)

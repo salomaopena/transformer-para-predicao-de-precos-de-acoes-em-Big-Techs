@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 from app.src.transformer.multi_head_attention import MultiHeadAttention
-from app.src.transformer.positionWiseFeedForward import PositionWiseFeedForward
+from app.src.transformer.position_wise_feed_forward import PositionWiseFeedForward
 
 class DecoderBlock(nn.Module):
     def __init__(self, n_dim: int, dropout: float, n_heads: int):
