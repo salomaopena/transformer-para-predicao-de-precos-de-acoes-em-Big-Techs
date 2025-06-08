@@ -76,7 +76,6 @@ class Transformer(nn.Module):
         Output
             (B, L, C) logits
         """
-        
         mask = (target == self.padIdx).float()
         targetPaddingMask = mask.masked_fill(mask == 1, float('-inf'))
 
@@ -90,8 +89,6 @@ class Transformer(nn.Module):
         output = self.fc(decoderOutput)  # shape (B, L, C)
         return output
 
-        
-        
     def forward(
             self, 
             x: torch.Tensor, 
