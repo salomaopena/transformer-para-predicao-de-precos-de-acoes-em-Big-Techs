@@ -42,17 +42,17 @@ class MultiHeadAttention(nn.Module):
         self.check_scaled_dot_product_attention_inputs(key)
         self.check_scaled_dot_product_attention_inputs(value)
         
-        d_k = query.size(-1)
-        print(f"query: {query.size()}, d_k: {d_k}")
-        tgt_len, src_len = query.size(-2), key.size(-2)
+        dk = query.size(-1)
+        print(f"query: {query.size()}, dk: {dk}")
+        targetLength, sourceLength = query.size(-2), key.size(-2)
 
         # logits = (B, H, tgt_len, E) * (B, H, E, src_len) = (B, H, tgt_len, src_len)
-        logits = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k) 
+        logits = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(dk) 
         
         # Attention mask here
         if attentionMask is not None:
             if attentionMask.dim() == 2:
-                assert attentionMask.size() == (tgt_len, src_len)
+                assert attentionMask.size() == (targetLength, sourceLength)
                 attentionMask = attentionMask.unsqueeze(0)
                 logits = logits + attentionMask
             else:
@@ -68,23 +68,23 @@ class MultiHeadAttention(nn.Module):
         
         return output, attention
 
-    def split_into_heads(self, x, num_heads):
-        batch_size, seq_length, hidden_dim = x.size()
-        x = x.view(batch_size, seq_length, num_heads, hidden_dim // num_heads)
+    def split_into_heads(self, x, numberHeads):
+        batchSize, sequenceLength, hiddenDimension = x.size()
+        x = x.view(batchSize, sequenceLength, numberHeads, hiddenDimension // numberHeads)
         
         return x.transpose(1, 2) # Final dim will be (batch_size, num_heads, seq_length, , hidden_dim // num_heads)
 
     def combine_heads(self, x):
-        batch_size, num_heads, seq_length, head_hidden_dim = x.size()
-        return x.transpose(1, 2).contiguous().view(batch_size, seq_length, num_heads * head_hidden_dim)
+        batchSize, numHeads, sequenceLength, headHiddenDimension = x.size()
+        return x.transpose(1, 2).contiguous().view(batchSize, sequenceLength, numHeads * headHiddenDimension)
         
     def forward(
             self, 
-            q, 
-            k, 
-            v, 
-            attention_mask=None, 
-            key_padding_mask=None):
+            query, 
+            key, 
+            value, 
+            attentionMask=None, 
+            keyPaddingMask=None):
         """
         q : tensor of shape (batch_size, query_sequence_length, hidden_dim)
         k : tensor of shape (batch_size, key_sequence_length, hidden_dim)
@@ -93,25 +93,25 @@ class MultiHeadAttention(nn.Module):
         key_padding_mask : tensor of shape (sequence_length, key_sequence_length)
        
         """
-        q = self.Wq(q)
-        k = self.Wk(k)
-        v = self.Wv(v)
+        query = self.queryLinearTransformation(query)
+        key = self.keyLinearTransformation(key)
+        value = self.valueLinearTransformation(value)
 
-        q = self.split_into_heads(q, self.num_heads)
-        k = self.split_into_heads(k, self.num_heads)
-        v = self.split_into_heads(v, self.num_heads)
+        query = self.split_into_heads(query, self.numberHeads)
+        key = self.split_into_heads(key, self.numberHeads)
+        value = self.split_into_heads(value, self.numberHeads)
         
         # attn_values, attn_weights = self.multihead_attn(q, k, v, attn_mask=attention_mask)
-        attn_values, attn_weights  = self.scaled_dot_product_attention(
-            query=q, 
-            key=k, 
-            value=v, 
-            attention_mask=attention_mask,
-            key_padding_mask=key_padding_mask,
+        attentionValues, attentionWeights  = self.scaled_dot_product_attention(
+            query=query, 
+            key=key, 
+            value=value, 
+            attentionMask=attentionMask,
+            keyPaddingMask=keyPaddingMask,
         )
-        grouped = self.combine_heads(attn_values)
-        output = self.Wo(grouped)
+        grouped = self.combine_heads(attentionValues)
+        output = self.outputLinearTransformation(grouped)
         
-        self.attention_weigths = attn_weights
+        self.attentionWeights = attentionWeights
         
         return output
