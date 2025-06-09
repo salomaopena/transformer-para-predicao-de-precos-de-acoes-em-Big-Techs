@@ -2,9 +2,13 @@ import torch
 import torch.nn as nn
 import math
 
+from tqdm import tqdm
 from encoder import Encoder
 from decoder import Decoder
 
+PAD_IDX = 0
+SOS_IDX = 1
+EOS_IDX = 2
 
 class Transformer(nn.Module):
     def __init__(self, **kwargs):
@@ -15,6 +19,7 @@ class Transformer(nn.Module):
         
         self.vocabularySize = kwargs.get('vocabularySize')
         self.model = kwargs.get('model')
+
         self.dropout = kwargs.get('dropout')
         self.numberEncoderLayers = kwargs.get('numberEncoderLayers')
         self.numberDecoderLayers = kwargs.get('numberDecoderLayers')

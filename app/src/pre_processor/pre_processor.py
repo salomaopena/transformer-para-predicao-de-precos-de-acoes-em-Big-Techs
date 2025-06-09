@@ -18,10 +18,10 @@ def convert_dateString_to_date(dateString: str) -> date:
 
 
 
-def cut_dataFrame_by_period(df: pd.DataFrame, days: int) -> pd.DataFrame:
+def cut_dataFrame_by_period(df: pd.DataFrame, days: int, endDate: date = date.today()) -> pd.DataFrame:
     """
-    Cuts the DataFrame from today date to the days quantity.
+    Cuts the DataFrame by end date minus the days quantity.
     """
-    endDate = date.today()
+    endDate = endDate
     startDate = endDate - timedelta(days=days)
     return df.loc[(df['Date'] >= startDate) & (df['Date'] <= endDate)] 
