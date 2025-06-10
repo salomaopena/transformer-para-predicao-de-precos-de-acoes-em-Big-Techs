@@ -1,27 +1,29 @@
 import torch.nn as nn
+import math
 
-from positional_enconding import PositionalEncoding
-from decoder_block import DecoderBlock
+from .positional_enconding import PositionalEncoding
+from .decoder_block import DecoderBlock
 
 class Decoder(nn.Module):
     def __init__(
         self, 
-        vocabularySize: int, 
         headDimension: int, 
         numberHeads: int,
         dropout: float, 
-        numberDecoderBlocks: int):
-        
+        numberDecoderBlocks: int
+    ):
         super(Decoder, self).__init__()
-        
-        self.embedding = nn.Embedding(
-            num_embeddings=vocabularySize, 
-            embedding_dim=headDimension,
-            padding_idx=0
+
+        self.headDimension = headDimension
+
+        self.linear = nn.Linear(
+            in_features=1, 
+            out_features=headDimension
         )
+
         self.positionalEncoding = PositionalEncoding(
             model=headDimension, 
-            dropout=dropout
+            dropoutProbability=dropout
         )
           
         self.decoderBlocks = nn.ModuleList([
@@ -29,7 +31,9 @@ class Decoder(nn.Module):
         ])
         
     def forward(self, target, memory, targetMask=None, targetPaddingMask=None, memoryPaddingMask=None):
-        x = self.embedding(target)
+        # Assume que target é (batch_size, seq_len) com floats → precisa virar (batch_size, seq_len, 1)
+        x = target.unsqueeze(-1)
+        x = self.linear(x) * math.sqrt(self.headDimension)
         x = self.positionalEncoding(x)
 
         for block in self.decoderBlocks:
@@ -38,5 +42,6 @@ class Decoder(nn.Module):
                 memory, 
                 targetMask=targetMask, 
                 targetPaddingMask=targetPaddingMask, 
-                memoryPaddingMask=memoryPaddingMask)
+                memoryPaddingMask=memoryPaddingMask
+            )
         return x

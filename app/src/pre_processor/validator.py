@@ -13,6 +13,12 @@ def is_string(data: any) -> bool:
     else:
         raise TypeError("Data is not a string")
 
+def is_even_number(number: int) -> bool:
+    if (isinstance(number, int) and number % 2 == 0):
+        return True
+    else:
+        raise ValueError("Number is not even")
+    
 def is_dataFrame(data: any) -> bool:
     if isinstance(data, pd.DataFrame):
         return True

@@ -1,10 +1,10 @@
 import torch.nn as nn
 
-from app.src.transformer.multi_head_attention import MultiHeadAttention
-from app.src.transformer.position_wise_feed_forward import PositionWiseFeedForward
+from transformer_processor.multi_head_attention import MultiHeadAttention
+from transformer_processor.position_wise_feed_forward import PositionWiseFeedForward
 
 class DecoderBlock(nn.Module):
-    def __init__(self, headDimension: int, numberHeads: int, dropout: float):
+    def __init__(self, headDimension: int, numberHeads: int, dropoutProbability: float):
         super(DecoderBlock, self).__init__()
         
         # The first Multi-Head Attention has a mask to avoid looking at the future
@@ -15,7 +15,7 @@ class DecoderBlock(nn.Module):
         # print(f"Normalization1 Shape: {self.normalization1.weight.shape}")
         
         # The second Multi-Head Attention will take inputs from the encoder as key/value inputs
-        self.crossAttention = MultiHeadAttention(headDimension=headDimension, nummberHeads=numberHeads)
+        self.crossAttention = MultiHeadAttention(headDimension=headDimension, numberHeads=numberHeads)
         self.normalization2 = nn.LayerNorm(headDimension)
         # print(f"Normalization2 Weight: {self.normalization2.weight}")
         # print(f"Normalization2 Bias: {self.normalization2.bias}")
@@ -32,11 +32,11 @@ class DecoderBlock(nn.Module):
     def forward(self, target, memory, targetMask=None, targetPaddingMask=None, memoryPaddingMask=None):
         
         maskedAttetionOutput = self.selfAttention(
-            q=target, k=target, v=target, attention_mask=targetMask, key_padding_mask=targetPaddingMask)
+            query=target, key=target, value=target, attentionMask=targetMask, keyPaddingMask=targetPaddingMask)
         x1 = target + self.normalization1(maskedAttetionOutput)
         
         crossAttetionOutput = self.crossAttention(
-            q=x1, k=memory, v=memory, attention_mask=None, key_padding_mask=memoryPaddingMask)
+            query=x1, key=memory, value=memory, attentionMask=None, keyPaddingMask=memoryPaddingMask)
         x2 = x1 + self.normalization2(crossAttetionOutput)
         
         feedForwardOutput = self.positionWiseFeedForward(x2)

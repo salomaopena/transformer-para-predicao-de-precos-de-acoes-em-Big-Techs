@@ -1,10 +1,9 @@
 import torch
 import torch.nn as nn
-import math
 
+from .encoder import Encoder
+from .decoder import Decoder
 from tqdm import tqdm
-from encoder import Encoder
-from decoder import Decoder
 
 PAD_IDX = 0
 SOS_IDX = 1
@@ -19,7 +18,6 @@ class Transformer(nn.Module):
         
         self.vocabularySize = kwargs.get('vocabularySize')
         self.model = kwargs.get('model')
-
         self.dropout = kwargs.get('dropout')
         self.numberEncoderLayers = kwargs.get('numberEncoderLayers')
         self.numberDecoderLayers = kwargs.get('numberDecoderLayers')
@@ -28,10 +26,10 @@ class Transformer(nn.Module):
         self.padIdx = kwargs.get('padIdx', 0)
 
         self.encoder = Encoder(
-            self.vocabularySize, self.model, self.dropout, self.numberEncoderLayers, self.numberHeads)
+            self.model, self.dropout, self.numberEncoderLayers, self.numberHeads)
         
         self.decoder = Decoder(
-            self.vocabularySize, self.model, self.dropout, self.numberDecoderLayers, self.numberHeads)
+            self.model, self.dropout, self.numberDecoderLayers, self.numberHeads)
         
         self.fc = nn.Linear(self.model, self.vocabularySize)
 
@@ -87,7 +85,7 @@ class Transformer(nn.Module):
         decoderOutput = self.decoder(
             target=target, 
             memory=memory, 
-            targeMask=self.generate_square_subsequent_mask(target.size(1)), 
+            targetMask=self.generate_square_subsequent_mask(target.size(1)), 
             targetPaddingMask=targetPaddingMask, 
             memoryPaddingMask=memoryPaddingMask,
         )  
@@ -112,9 +110,53 @@ class Transformer(nn.Module):
 
         # Decoder output shape (B, L, C)
         decoderOutput = self.decode(
-            tgt=y, 
+            target=y, 
             memory=encoderOutput, 
-            memory_padding_mask=encoderPaddingMask
+            memoryPaddingMask=encoderPaddingMask
         )  
         
         return decoderOutput
+    
+    # Define a prediction method for the Transformer model
+    def predict(
+        self,
+        x: torch.Tensor,
+        startOfSentenceIdx: int=1,
+        endOfSentenceIdx: int=2,
+        maxLength: int=None
+    ) -> torch.Tensor:
+        """
+        Method to use at inference time. Predict y from x one token at a time. This method is greedy
+        decoding.
+        Input
+            x: str
+        Output
+            (B, L, C) logits
+        """
+
+        # Pad the tokens with beginning and end of sentence tokens
+        x = torch.cat([
+            torch.tensor([startOfSentenceIdx]), 
+            x, 
+            torch.tensor([endOfSentenceIdx])]
+        ).unsqueeze(0)
+
+        encoder_output, mask = self.transformer.encode(x) # (B, S, E)
+        
+        if not maxLength:
+            maxLength = x.size(1)
+
+        outputs = torch.ones((x.size()[0], maxLength)).type_as(x).long() * startOfSentenceIdx
+        for step in range(1, maxLength):
+            y = outputs[:, :step]
+            probs = self.transformer.decode(y, encoder_output)
+            output = torch.argmax(probs, dim=-1)
+            
+            # Prediction step by step
+            # print(f"Knowing {y} we output {output[:, -1]}")
+
+            if output[:, -1].detach().numpy() in (endOfSentenceIdx, startOfSentenceIdx):
+                break
+            outputs[:, step] = output[:, -1]
+            
+        return outputs

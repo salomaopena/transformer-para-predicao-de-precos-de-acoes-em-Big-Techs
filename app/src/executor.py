@@ -16,18 +16,19 @@ from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from mpl_toolkits.axes_grid1 import ImageGrid
 
+from transformer_processor.transformer import Transformer
+from stock_predictor import StockPredictor
 from data_processor.stock_dataset import StockDataset
 from pre_processor.pre_processor import cut_dataFrame_by_period, convert_dateString_to_date
 from pre_processor.validator import is_string, is_dataFrame
-from transformer.transformer import Transformer
 
 # Constants
 PAD_IDX = 0
 SOS_IDX = 1
 EOS_IDX = 2
-TRAINING_END_DATE_STRING = '2024-12-31'
+TRAINING_END_DATE_STRING = '12/31/2024'
 TRAINING_END_DATE = convert_dateString_to_date(TRAINING_END_DATE_STRING)
-EVALUATION_END_DATE_STRING = '2025-05-29'
+EVALUATION_END_DATE_STRING = '05/29/2025'
 EVALUATION_END_DATE = convert_dateString_to_date(EVALUATION_END_DATE_STRING)
 
 # Load datasets
@@ -38,25 +39,15 @@ MFST_PANDAS_DATAFRAME = pd.read_csv(r'./../data/Historical_Data_MSFT_1Y.csv')
 
 # Instantiate datasets
 allPurposeDatasets = [ 
-    StockDataset(title="APPL", dataFrame=APPL_PANDAS_DATAFRAME, paddingIdx=PAD_IDX, startOfSentenceIdx=SOS_IDX, endOfSentenceIdx=EOS_IDX), 
-    StockDataset(title="GOOGL", dataFrame=GOOGL_PANDAS_DATAFRAME, paddingIdx=PAD_IDX, startOfSentenceIdx=SOS_IDX, endOfSentenceIdx=EOS_IDX), 
-    StockDataset(title="IBM", dataFrame=IBM_PANDAS_DATAFRAME, paddingIdx=PAD_IDX, startOfSentenceIdx=SOS_IDX, endOfSentenceIdx=EOS_IDX),
-    StockDataset(title="MSFT", dataFrame=MFST_PANDAS_DATAFRAME, paddingIdx=PAD_IDX, startOfSentenceIdx=SOS_IDX, endOfSentenceIdx=EOS_IDX),
+    StockDataset(title="APPL", dataFrame=APPL_PANDAS_DATAFRAME, windowSize=10), 
+    StockDataset(title="GOOGL", dataFrame=GOOGL_PANDAS_DATAFRAME, windowSize=10), 
+    StockDataset(title="IBM", dataFrame=IBM_PANDAS_DATAFRAME, windowSize=10),
+    StockDataset(title="MSFT", dataFrame=MFST_PANDAS_DATAFRAME, windowSize=10),
 ]
 
-trainingDatasets = [
-    cut_dataFrame_by_period(allPurposeDatasets[0], days=90, endDate=TRAINING_END_DATE), 
-    cut_dataFrame_by_period(allPurposeDatasets[1], days=90, endDate=TRAINING_END_DATE), 
-    cut_dataFrame_by_period(allPurposeDatasets[2], days=90, endDate=TRAINING_END_DATE),
-    cut_dataFrame_by_period(allPurposeDatasets[3], days=90, endDate=TRAINING_END_DATE),
-]
+trainingDatasets = []
 
-evaluationDatasets = [
-    cut_dataFrame_by_period(allPurposeDatasets[0], days=90, endDate=EVALUATION_END_DATE),
-    cut_dataFrame_by_period(allPurposeDatasets[1], days=90, endDate=EVALUATION_END_DATE), 
-    cut_dataFrame_by_period(allPurposeDatasets[2], days=90, endDate=EVALUATION_END_DATE),
-    cut_dataFrame_by_period(allPurposeDatasets[3], days=90, endDate=EVALUATION_END_DATE),
-]
+evaluationDatasets = []
 
 # Code section
 
@@ -69,7 +60,7 @@ for dataset in allPurposeDatasets:
             # Print the title of the dataset being processed
             print(f'Processing dataset: {dataset.title}')
             # Print the shape of the DataFrame
-            print(f'DataFrame shape: {dataset.__shape__()}')
+            # print(f'DataFrame shape: {dataset.__shape__()}')
 
             # Iterate through the DataFrame rows
             for index, row in dataset.dataFrame.iterrows():
@@ -80,67 +71,23 @@ for dataset in allPurposeDatasets:
                         # Convert the 'Date' string to a date object
                         dataset.dataFrame.loc[index, 'Date'] = convert_dateString_to_date(dataset.dataFrame['Date'][index])
 
-                        # Print the value of 'Close/Last' for the current index
-                        print(f'Item for index {index}: {dataset.__getitem__(index)}')
-
                 # Catch any TypeError that may occur during conversion
                 except TypeError as error:
                     print("Error: ", error)
-            # Cut the DataFrame by the last 90 days
-            selectedData = cut_dataFrame_by_period(dataset.dataFrame, days=90)
 
-            # Print the selected data
-            # print(f"Selected data for {dataset.title}:")
-            # print(selectedData)
+            # Create the training dataset by cutting the DataFrame
+            trainingDatasets.append(StockDataset(title=("Training dataset - " + dataset.title),
+                                                dataFrame=cut_dataFrame_by_period(dataset.dataFrame, days=90, endDate=TRAINING_END_DATE),
+                                                windowSize=10))
+            
+             # Get the shape of the appended training dataset
+            print(f"{trainingDatasets[-1].__shape__()}")
+
+            #Create the evaluation dataset by cutting the DataFrame
+            evaluationDatasets.append(cut_dataFrame_by_period(dataset.dataFrame, days=90, endDate=EVALUATION_END_DATE))
 
     except TypeError as error:
         print("Error: ", error)
-
-# Training section
-
-# Define a prediction method for the Transformer model
-def predict(
-        self,
-        x: torch.Tensor,
-        startOfSentenceIdx: int=1,
-        endOfSentenceIdx: int=2,
-        maxLength: int=None
-    ) -> torch.Tensor:
-    """
-    Method to use at inference time. Predict y from x one token at a time. This method is greedy
-    decoding.
-    Input
-        x: str
-    Output
-        (B, L, C) logits
-    """
-
-    # Pad the tokens with beginning and end of sentence tokens
-    x = torch.cat([
-        torch.tensor([startOfSentenceIdx]), 
-        x, 
-        torch.tensor([endOfSentenceIdx])]
-    ).unsqueeze(0)
-
-    encoder_output, mask = self.transformer.encode(x) # (B, S, E)
-    
-    if not maxLength:
-        maxLength = x.size(1)
-
-    outputs = torch.ones((x.size()[0], maxLength)).type_as(x).long() * startOfSentenceIdx
-    for step in range(1, maxLength):
-        y = outputs[:, :step]
-        probs = self.transformer.decode(y, encoder_output)
-        output = torch.argmax(probs, dim=-1)
-        
-        # Prediction step by step
-        # print(f"Knowing {y} we output {output[:, -1]}")
-
-        if output[:, -1].detach().numpy() in (endOfSentenceIdx, startOfSentenceIdx):
-            break
-        outputs[:, step] = output[:, -1]
-        
-    return outputs
 
 # Define a train method for the Transformer model
 def train(model, optimizer, loader, lossFunction, epoch):
@@ -154,21 +101,21 @@ def train(model, optimizer, loader, lossFunction, epoch):
         for x, y in tepoch:
             tepoch.set_description(f"Epoch {epoch}")
 
-        optimizer.zero_grad()
-        logits = model(x, y[:, :-1])
-        loss = lossFunction(logits.contiguous().view(-1, model.vocab_size), y[:, 1:].contiguous().view(-1))
-        loss.backward()
-        optimizer.step()
-        losses += loss.item()
+            optimizer.zero_grad()
+            logits = model(x, y[:, :-1])
+            loss = lossFunction(logits.contiguous().view(-1, model.vocab_size), y[:, 1:].contiguous().view(-1))
+            loss.backward()
+            optimizer.step()
+            losses += loss.item()
         
-        preds = logits.argmax(dim=-1)
-        masked_pred = preds * (y[:, 1:]!=PAD_IDX)
-        accuracy = (masked_pred == y[:, 1:]).float().mean()
-        acc += accuracy.item()
-        
-        historyLoss.append(loss.item())
-        historyAccumulator.append(accuracy.item())
-        tepoch.set_postfix(loss=loss.item(), accuracy=100. * accuracy.item())
+            preds = logits.argmax(dim=-1)
+            masked_pred = preds * (y[:, 1:]!=PAD_IDX)
+            accuracy = (masked_pred == y[:, 1:]).float().mean()
+            acc += accuracy.item()
+            
+            historyLoss.append(loss.item())
+            historyAccumulator.append(accuracy.item())
+            tepoch.set_postfix(loss=loss.item(), accuracy=100. * accuracy.item())
 
     return losses / len(list(loader)), accumulator / len(list(loader)), historyLoss, historyAccumulator
 
@@ -212,12 +159,12 @@ def collate_function(batch):
 
 # Model hyperparameters
 args = {
-    'vocabularySize': 128,
-    'model': 128,
+    'vocabularySize': 63,
+    'model': 32,
     'dropout': 0.1,
     'numberEncoderLayers': 1,
     'numberDecoderLayers': 1,
-    'numberHeads': 4
+    'numberHeads': 9
 }
 
 # Define model here
@@ -226,12 +173,6 @@ model = Transformer(**args)
 # Instantiate datasets
 trainDataLoader = DataLoader(trainingDatasets[0], batch_size=256, collate_fn=collate_function)
 evaluetionDataLoader = DataLoader(evaluationDatasets[0], batch_size=256, collate_fn=collate_function)
-
-# During debugging, we ensure sources and targets are indeed reversed
-# s, t = next(iter(dataloader_train))
-# print(s[:4, ...])
-# print(t[:4, ...])
-# print(s.size())
 
 # Initialize model parameters
 for p in model.parameters():
@@ -251,7 +192,8 @@ history = {
 }
 
 # Main loop
-for epoch in range(1, 4):
+for epoch in range(1, 10):
+    print(f"Epoch {epoch} of 9")
     startTime = time.time()
     trainLoss, trainAccumulator, historyLoss, historyAccumulator = train(model, optimizer, trainDataLoader, lossFunction, epoch)
     history['trainLoss'] += historyLoss
@@ -261,3 +203,5 @@ for epoch in range(1, 4):
     history['evaluationLoss'] += historyLoss
     history['evaluationAccumulator'] += historyAccumulator
     print((f"Epoch: {epoch}, Train loss: {trainLoss:.3f}, Train acc: {trainAccumulator:.3f}, Val loss: {evaluationLoss:.3f}, Val acc: {evaluationAccumulator:.3f} "f"Epoch time = {(endTime - startTime):.3f}s"))
+
+stockPedictor = StockPredictor(model)
