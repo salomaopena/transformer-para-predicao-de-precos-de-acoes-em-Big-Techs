@@ -24,4 +24,6 @@ def cut_dataFrame_by_period(df: pd.DataFrame, days: int, endDate: date = date.to
     """
     endDate = endDate
     startDate = endDate - timedelta(days=days)
+    #print(f"Cutting DataFrame from {startDate} to {endDate}.")
+
     return df.loc[(df['Date'] >= startDate) & (df['Date'] <= endDate)] 

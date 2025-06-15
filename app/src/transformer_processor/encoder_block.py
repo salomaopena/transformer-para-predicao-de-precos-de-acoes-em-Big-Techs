@@ -15,6 +15,7 @@ class EncoderBlock(nn.Module):
         self.dropout = nn.Dropout(dropoutProbability)
         
     def forward(self, x, paddingMask=None):
+        print(f"Input shape: {x.shape}")
         assert x.ndim == 3, f"Expected input to be 3-dim [batch, seq_len, dim], got {x.ndim}-dim"
 
         attentionOutput = self.multiHeadAttention(x, x, x, keyPaddingMask=paddingMask)

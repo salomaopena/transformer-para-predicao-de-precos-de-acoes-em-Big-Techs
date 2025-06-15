@@ -26,7 +26,7 @@ from pre_processor.validator import is_string, is_dataFrame
 PAD_IDX = 0
 SOS_IDX = 1
 EOS_IDX = 2
-TRAINING_END_DATE_STRING = '12/31/2024'
+TRAINING_END_DATE_STRING = '01/17/2025'
 TRAINING_END_DATE = convert_dateString_to_date(TRAINING_END_DATE_STRING)
 EVALUATION_END_DATE_STRING = '05/29/2025'
 EVALUATION_END_DATE = convert_dateString_to_date(EVALUATION_END_DATE_STRING)
@@ -77,14 +77,17 @@ for dataset in allPurposeDatasets:
 
             # Create the training dataset by cutting the DataFrame
             trainingDatasets.append(StockDataset(title=("Training dataset - " + dataset.title),
-                                                dataFrame=cut_dataFrame_by_period(dataset.dataFrame, days=90, endDate=TRAINING_END_DATE),
+                                                dataFrame=cut_dataFrame_by_period(dataset.dataFrame, days=199, endDate=TRAINING_END_DATE),
                                                 windowSize=10))
             
              # Get the shape of the appended training dataset
             print(f"{trainingDatasets[-1].__shape__()}")
 
             #Create the evaluation dataset by cutting the DataFrame
-            evaluationDatasets.append(cut_dataFrame_by_period(dataset.dataFrame, days=90, endDate=EVALUATION_END_DATE))
+            evaluationDatasets.append(StockDataset(title="Evaluation dataset - " + dataset.title,
+                                                   dataFrame=cut_dataFrame_by_period(dataset.dataFrame, days=90, endDate=EVALUATION_END_DATE),
+                                                   windowSize=10
+))
 
     except TypeError as error:
         print("Error: ", error)
@@ -102,20 +105,19 @@ def train(model, optimizer, loader, lossFunction, epoch):
             tepoch.set_description(f"Epoch {epoch}")
 
             optimizer.zero_grad()
-            logits = model(x, y[:, :-1])
-            loss = lossFunction(logits.contiguous().view(-1, model.vocab_size), y[:, 1:].contiguous().view(-1))
+            logits = model(x, y)
+            loss = lossFunction(logits[:, -1, :], y)
             loss.backward()
             optimizer.step()
             losses += loss.item()
+            #print(f"logits shape: {logits[:, -1, :].shape}, y shape: {y.shape}")
         
-            preds = logits.argmax(dim=-1)
-            masked_pred = preds * (y[:, 1:]!=PAD_IDX)
-            accuracy = (masked_pred == y[:, 1:]).float().mean()
-            acc += accuracy.item()
+            accuracy = (1 - torch.mean(torch.abs(logits - y) / y)).item()
+            accumulator += accuracy
             
             historyLoss.append(loss.item())
-            historyAccumulator.append(accuracy.item())
-            tepoch.set_postfix(loss=loss.item(), accuracy=100. * accuracy.item())
+            historyAccumulator.append(accuracy)
+            tepoch.set_postfix(loss=loss.item(), accuracy=100. * accuracy)
 
     return losses / len(list(loader)), accumulator / len(list(loader)), historyLoss, historyAccumulator
 
@@ -129,25 +131,23 @@ def evaluate(model, loader, lossFunction):
 
     for x, y in tqdm(loader, position=0, leave=True):
 
-        logits = model(x, y[:, :-1])
-        loss = lossFunction(logits.contiguous().view(-1, model.vocab_size), y[:, 1:].contiguous().view(-1))
+        logits = model(x, y)
+        logits = logits.permute(1, 0, 2)
+
+        loss = lossFunction(logits, y)
+
         losses += loss.item()
         
-        preds = logits.argmax(dim=-1)
-        masked_pred = preds * (y[:, 1:]!=PAD_IDX)
-        accuracy = (masked_pred == y[:, 1:]).float().mean()
-        acc += accuracy.item()
+        accuracy = (1 - torch.mean(torch.abs(logits - y) / y)).item()
+        accumulator += accuracy
         
         historyLoss.append(loss.item())
-        historyAccumulator.append(accuracy.item())
+        historyAccumulator.append(accuracy)
 
-    return losses / len(list(loader)), acc / len(list(loader)), historyLoss, historyAccumulator
+    return losses / len(list(loader)), accumulator / len(list(loader)), historyLoss, historyAccumulator
 
 # Define a collate function for the Transformer model, with DataLoader
 def collate_function(batch):
-    """ 
-    This function pads inputs with PAD_IDX to have batches of equal length
-    """
     sourceBatch, targetBatch = [], []
     for sourceSample, targetSample in batch:
         sourceBatch.append(sourceSample)
@@ -155,24 +155,29 @@ def collate_function(batch):
 
     sourceBatch = pad_sequence(sourceBatch, padding_value=PAD_IDX, batch_first=True)
     targetBatch = pad_sequence(targetBatch, padding_value=PAD_IDX, batch_first=True)
+    print(f"sourceBatch final shape: {sourceBatch.shape}")
+    #print(f"sourceBatch shape (after padding): {sourceBatch.shape}")
+    #print(f"targetBatch shape (after padding): {targetBatch.shape}")
+
     return sourceBatch, targetBatch
 
 # Model hyperparameters
 args = {
-    'vocabularySize': 63,
-    'model': 32,
+    'model': 10,
     'dropout': 0.1,
     'numberEncoderLayers': 1,
     'numberDecoderLayers': 1,
-    'numberHeads': 9
+    'numberHeads': 1,
+    'inputDim': 1,  # Number of input features
+    'outputDim': 1,  # Number of output features
 }
 
 # Define model here
 model = Transformer(**args)
 
-# Instantiate datasets
-trainDataLoader = DataLoader(trainingDatasets[0], batch_size=256, collate_fn=collate_function)
-evaluetionDataLoader = DataLoader(evaluationDatasets[0], batch_size=256, collate_fn=collate_function)
+# Instantiate datasets for training and evaluation
+trainDataLoader = DataLoader(trainingDatasets[0], batch_size=10, collate_fn=collate_function)
+evaluetionDataLoader = DataLoader(evaluationDatasets[0], batch_size=10, collate_fn=collate_function)
 
 # Initialize model parameters
 for p in model.parameters():
@@ -180,7 +185,7 @@ for p in model.parameters():
         nn.init.xavier_uniform_(p)
 
 # Define loss function : we ignore logits which are padding tokens
-lossFunction = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
+lossFunction = torch.nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001, betas=(0.9, 0.98), eps=1e-9)
 
 # Create history to dictionary
@@ -192,8 +197,8 @@ history = {
 }
 
 # Main loop
-for epoch in range(1, 10):
-    print(f"Epoch {epoch} of 9")
+for epoch in range(1, 100):
+    print(f"Epoch {epoch} of 100")
     startTime = time.time()
     trainLoss, trainAccumulator, historyLoss, historyAccumulator = train(model, optimizer, trainDataLoader, lossFunction, epoch)
     history['trainLoss'] += historyLoss

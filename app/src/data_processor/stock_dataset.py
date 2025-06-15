@@ -24,8 +24,10 @@ class StockDataset(Dataset):
         return len(self.prices) - self.windowSize
 
     def __getitem__(self, idx):
-        # Entrada: sequência de preços
-        x = self.prices[idx:idx + self.windowSize]
-        # Saída: mesma sequência deslocada (o que queremos prever)
-        y = self.prices[idx + 1:idx + self.windowSize + 1]
-        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
+        x = self.prices[idx:idx + self.windowSize]  # shape (windowSize,)
+        y = self.prices[idx + 1: idx + self.windowSize + 1]
+
+        x = torch.tensor(x, dtype=torch.float32).unsqueeze(-1)  # shape (windowSize, 1)
+        y = torch.tensor(y, dtype=torch.float32).unsqueeze(-1)  # shape (windowSize, 1)
+
+        return x, y

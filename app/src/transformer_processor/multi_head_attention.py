@@ -13,7 +13,7 @@ class MultiHeadAttention(nn.Module):
         self.numberHeads = numberHeads
 
         assert headDimension % numberHeads == 0, "headDimension deve ser divisível por numberHeads"
-        self.dimPerHead = headDimension // numberHeads
+        self.dimensionPerHead = headDimension // numberHeads
 
         # Camadas lineares para Q, K e V, todas mantendo a dimensão total
         self.queryLinear = nn.Linear(headDimension, headDimension, bias=False)
@@ -25,12 +25,12 @@ class MultiHeadAttention(nn.Module):
 
     def split_into_heads(self, x):
         batchSize, seqLen, hiddenDim = x.size()
-        x = x.view(batchSize, seqLen, self.numberHeads, self.dimPerHead)
+        x = x.view(batchSize, seqLen, self.numberHeads, self.dimensionPerHead)
         return x.transpose(1, 2)  # (batch, heads, seqLen, dimPerHead)
 
     def combine_heads(self, x):
-        batchSize, numHeads, seqLen, dimPerHead = x.size()
-        return x.transpose(1, 2).contiguous().view(batchSize, seqLen, numHeads * dimPerHead)
+        batchSize, numHeads, seqLen, dimensionPerHead = x.size()
+        return x.transpose(1, 2).contiguous().view(batchSize, seqLen, numHeads * dimensionPerHead)
 
     def scaled_dot_product_attention(self, query, key, value, attentionMask=None, keyPaddingMask=None):
         dk = query.size(-1)

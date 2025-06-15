@@ -31,15 +31,18 @@ class Encoder(nn.Module):
         ])
         
     def forward(self, x, paddingMask=None):
-        """
-        x: Tensor of shape [batch_size, seq_len] with float values (ex: stock prices)
-        paddingMask: Optional mask tensor of shape [batch_size, seq_len]
-        """
-        x = x.unsqueeze(-1)  # [B, S] -> [B, S, 1]
-        x = self.linear(x) * math.sqrt(self.headDimension)  # [B, S, E]
-        x = self.positionalEncoding(x)
+        print(f"Input shape before linear: {x.shape}")
+        
+        # # Verifica se está faltando a última dimensão (precisa ser [S, B, 1])
+        # if x.ndim == 2:
+        #     x = x.unsqueeze(-1)
 
+        # x = self.linear(x) * math.sqrt(self.headDimension)  # Espera (S, B, 1) → (S, B, headDimension)
+        print(f"Self input shape: {x.shape}")
+        
+        x = self.positionalEncoding(x)
+        
         for block in self.encoderBlocks:
             x = block(x=x, paddingMask=paddingMask)
 
-        return x  # shape: [B, S, E]
+        return x
